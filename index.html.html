@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  html,body{margin:0;padding:0;background:oklch(0.97 0.004 90);}
+  *{box-sizing:border-box;font-family:'Inter',system-ui,sans-serif;}
+  input,select,textarea{font-family:'Inter',system-ui,sans-serif;}
+  ::placeholder{color:oklch(0.6 0.005 90);}
+</style>
+</helmet>
+
+<div style="min-height:100vh;width:100%;display:flex;flex-direction:column;background:oklch(0.97 0.004 90);color:oklch(0.22 0.005 90);">
+
+  <sc-if value="{{ showConfigBanner }}" hint-placeholder-val="{{ false }}">
+    <div style="background:oklch(0.83 0.14 70);color:oklch(0.2 0.02 70);padding:10px 24px;font-size:13px;font-weight:600;text-align:center;letter-spacing:.01em;">
+      Setup needed: add your Supabase URL + anon key inside the Component logic (SUPABASE_URL / SUPABASE_ANON_KEY constants) to enable saving.
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ locked }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:24px;">
+      <div style="width:100%;max-width:380px;background:#fff;border:1px solid oklch(0.9 0.005 90);border-radius:10px;padding:36px 32px;box-shadow:0 1px 3px rgba(0,0,0,.06);">
+        <div style="width:40px;height:40px;border-radius:8px;background:oklch(0.7 0.16 55);display:flex;align-items:center;justify-content:center;margin-bottom:20px;">
+          <div style="width:16px;height:16px;background:#fff;clip-path:polygon(50% 0,100% 100%,0 100%);"></div>
+        </div>
+        <div style="font-size:20px;font-weight:700;letter-spacing:-0.01em;margin-bottom:4px;">TCP Markup Generator</div>
+        <div style="font-size:13px;color:oklch(0.5 0.005 90);margin-bottom:24px;">Enter the shared password to continue.</div>
+        <form onSubmit="{{ submitPassword }}">
+          <input type="password" placeholder="Password" value="{{ passwordInput }}" onChange="{{ onPasswordChange }}" style="width:100%;padding:11px 12px;border:1px solid oklch(0.85 0.005 90);border-radius:7px;font-size:14px;outline:none;margin-bottom:12px;" style-focus="border-color:oklch(0.7 0.16 55)" autofocus="true"></input>
+          <sc-if value="{{ passwordError }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:12.5px;color:oklch(0.55 0.19 25);margin-bottom:12px;">Incorrect password. Try again.</div>
+          </sc-if>
+          <button type="submit" style="width:100%;padding:11px 12px;border:none;border-radius:7px;background:oklch(0.7 0.16 55);color:#fff;font-size:14px;font-weight:600;cursor:pointer;" style-hover="background:oklch(0.65 0.16 55)">Enter</button>
+        </form>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ unlockedView }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex;flex-direction:column;flex:1;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 32px;border-bottom:1px solid oklch(0.9 0.005 90);background:#fff;">
+        <div style="display:flex;align-items:center;gap:10px;cursor:pointer;" onClick="{{ goToJobsList }}">
+          <div style="width:26px;height:26px;border-radius:6px;background:oklch(0.7 0.16 55);display:flex;align-items:center;justify-content:center;flex:none;">
+            <div style="width:10px;height:10px;background:#fff;clip-path:polygon(50% 0,100% 100%,0 100%);"></div>
+          </div>
+          <div style="font-size:15px;font-weight:700;letter-spacing:-0.01em;">TCP Markup Generator</div>
+          <sc-if value="{{ selectedJob }}" hint-placeholder-val="{{ false }}">
+            <div style="font-size:13px;color:oklch(0.5 0.005 90);">/ Job {{ selectedJob.job_number }}</div>
+          </sc-if>
+        </div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:oklch(0.6 0.005 90);text-transform:uppercase;letter-spacing:.05em;">MVP</div>
+      </div>
+
+      <sc-if value="{{ error }}" hint-placeholder-val="{{ false }}">
+        <div style="background:oklch(0.94 0.05 25);color:oklch(0.4 0.15 25);padding:10px 32px;font-size:13px;">{{ error }}</div>
+      </sc-if>
+
+      <!-- JOBS LIST VIEW -->
+      <sc-if value="{{ viewJobsList }}" hint-placeholder-val="{{ true }}">
+        <div style="flex:1;padding:32px;max-width:760px;width:100%;margin:0 auto;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+            <div style="font-size:22px;font-weight:700;letter-spacing:-0.01em;">Jobs</div>
+            <button onClick="{{ toggleNewJobForm }}" style="padding:9px 16px;border:none;border-radius:7px;background:oklch(0.7 0.16 55);color:#fff;font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap;flex:none;" style-hover="background:oklch(0.65 0.16 55)">+ New Job</button>
+          </div>
+
+          <sc-if value="{{ showNewJobForm }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#fff;border:1px solid oklch(0.9 0.005 90);border-radius:10px;padding:20px;margin-bottom:20px;display:flex;gap:10px;align-items:flex-end;">
+              <div style="flex:1;">
+                <label style="display:block;font-size:12px;font-weight:600;color:oklch(0.5 0.005 90);margin-bottom:6px;">Job Number</label>
+                <input type="text" placeholder="e.g. 2026-014" value="{{ newJobNumber }}" onChange="{{ onNewJobNumberChange }}" style="width:100%;padding:10px 12px;border:1px solid oklch(0.85 0.005 90);border-radius:7px;font-size:14px;outline:none;"></input>
+              </div>
+              <button onClick="{{ createJob }}" disabled="{{ savingJob }}" style="padding:10px 16px;border:none;border-radius:7px;background:oklch(0.25 0.01 90);color:#fff;font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap;">{{ createJobLabel }}</button>
+              <button onClick="{{ toggleNewJobForm }}" style="padding:10px 14px;border:1px solid oklch(0.85 0.005 90);border-radius:7px;background:#fff;color:oklch(0.4 0.005 90);font-size:13.5px;font-weight:600;cursor:pointer;">Cancel</button>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ jobsLoading }}" hint-placeholder-val="{{ false }}">
+            <div style="color:oklch(0.55 0.005 90);font-size:13.5px;padding:20px 0;">Loading jobs…</div>
+          </sc-if>
+
+          <sc-if value="{{ noJobsYet }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px dashed oklch(0.85 0.005 90);border-radius:10px;padding:40px;text-align:center;color:oklch(0.55 0.005 90);font-size:13.5px;">No jobs yet. Create one to get started.</div>
+          </sc-if>
+
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <sc-for list="{{ jobs }}" as="job" hint-placeholder-count="0">
+              <div onClick="{{ job.open }}" style="background:#fff;border:1px solid oklch(0.9 0.005 90);border-radius:10px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;" style-hover="border-color:oklch(0.7 0.16 55)">
+                <div>
+                  <div style="font-size:14.5px;font-weight:600;">Job {{ job.job_number }}</div>
+                  <div style="font-size:12px;color:oklch(0.55 0.005 90);margin-top:2px;">Created {{ job.createdLabel }}</div>
+                </div>
+                <div style="font-size:18px;color:oklch(0.6 0.005 90);">→</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- JOB DETAIL VIEW -->
+      <sc-if value="{{ viewJobDetail }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;padding:32px;max-width:820px;width:100%;margin:0 auto;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+            <button onClick="{{ goToJobsList }}" style="border:none;background:none;color:oklch(0.55 0.005 90);font-size:13px;cursor:pointer;padding:0;">← All jobs</button>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin:8px 0 24px;">
+            <div style="font-size:22px;font-weight:700;letter-spacing:-0.01em;">Job {{ selectedJob.job_number }}</div>
+            <button onClick="{{ toggleNewStageForm }}" style="padding:9px 16px;border:none;border-radius:7px;background:oklch(0.7 0.16 55);color:#fff;font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap;flex:none;" style-hover="background:oklch(0.65 0.16 55)">+ Add Stage</button>
+          </div>
+
+          <!-- STAGE FORM -->
+          <sc-if value="{{ showNewStageForm }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#fff;border:1px solid oklch(0.9 0.005 90);border-radius:12px;padding:26px;margin-bottom:24px;">
+              <div style="font-size:15px;font-weight:700;margin-bottom:18px;">New Stage — Questionnaire</div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                <div style="grid-column:1/-1;">
+                  <label style="display:block;font-size:12px;font-weight:600;color:oklch(0.5 0.005 90);margin-bottom:6px;">Address</label>
+                  <input type="text" placeholder="Site address" value="{{ newStage.address }}" onChange="{{ onAddressChange }}" style="width:100%;padding:10px 12px;border:1px solid oklch(0.85 0.005 90);border-radius:7px;font-size:14px;outline:none;"></input>
+                </div>
+                <div style="grid-column:1/-1;">
+                  <label style="display:block;font-size:12px;font-weight:600;color:oklch(0.5 0.005 90);margin-bottom:6px;">Type of Job / Scope of Works</label>
+                  <input type="text" placeholder="e.g. Water main replacement" value="{{ newStage.scopeOfWorks }}" onChange="{{ onScopeChange }}" style="width:100%;padding:10px 12px;border:1px solid oklch(0.85 0.005 90);border-radius:7px;font-size:14px;outline:none;"></input>
+                </div>
+
+                <div>
+                  <label style="display:block;font-size:12px;font-weight:600;color:oklch(0.5 0.005 90);margin-bottom:6px;">Start Date</label>
+                  <input type="date" value="{{ newStage.startDate }}" onChange="{{ onStartDateChange }}" style="width:100%;padding:10px 12px;border:1px solid oklch(0.85 0.005 90);border-radius:7px;font-size:14px;outline:none;"></input>
+                </div>
+                <div>
+                  <label style="display:block;font-size:12px;font-weight:600;color:oklch(0.5 0.005 90);margin-bottom:6px;">End Date</label>
+                  <input type="date" value="{{ newStage.endDate }}" onChange="{{ onEndDateChange }}" style="width:100%;padding:10px 12px;border:1px solid oklch(0.85 0.005 90);border-radius:7px;font-size:14px;outline:none;"></input>
+                </div>
+
+                <div>
+                  <label style="display:block;font-size:12px;font-weight:600;color:oklch(0.5 0.005 90);margin-bottom:6px;">Work Hours</label>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <input type="time" value="{{ newStage.workHoursStart }}" onChange="{{ onWorkHoursStartChange }}" style="flex:1;padding:10px 12px;border:1px solid oklch(0.85 0.005 90);border-radius:7px;font-size:14px;outline:none;"></input>
+                    <span style="color:oklch(0.55 0.005 90);font-size:13px;">to</span>
+                    <input type="time" value="{{ newStage.workHoursEnd }}" onChange="{{ onWorkHoursEndChange }}" style="flex:1;padding:10px 12px;border:1px solid oklch(0.85 0.005 90);border-radius:7px;font-size:14px;outline:none;"></input>
+                  </div>
+                </div>
+                <div>
+                  <label style="display:block;font-size:12px;font-weight:600;color:oklch(0.5 0.005 90);margin-bottom:6px;">Shift</label>
+                  <div style="display:flex;border:1px solid oklch(0.85 0.005 90);border-radius:7px;overflow:hidden;">
+                    <div onClick="{{ setShiftDay }}" style="flex:1;text-align:center;padding:10px 0;font-size:13px;font-weight:600;cursor:pointer;background:{{ shiftDayBg }};color:{{ shiftDayColor }};">Day</div>
+                    <div onClick="{{ setShiftNight }}" style="flex:1;text-align:center;padding:10px 0;font-size:13px;font-weight:600;cursor:pointer;background:{{ shiftNightBg }};color:{{ shiftNightColor }};">Night</div>
+                  </div>
+                </div>
+
+                <div>
+                  <label style="display:block;font-size:12px;font-weight:600;color:oklch(0.5 0.005 90);margin-bottom:6px;">Number of Lanes Affected</label>
+                  <input type="number" min="0" placeholder="0" value="{{ newStage.lanesAffected }}" onChange="{{ onLanesChange }}" style="width:100%;padding:10px 12px;border:1px solid oklch(0.85 0.005 90);border-radius:7px;font-size:14px;outline:none;"></input>
+                </div>
+                <div>
+                  <label style="display:block;font-size:12px;font-weight:600;color:oklch(0.5 0.005 90);margin-bottom:6px;">Works</label>
+                  <div style="display:flex;border:1px solid oklch(0.85 0.005 90);border-radius:7px;overflow:hidden;">
+                    <div onClick="{{ setMobile }}" style="flex:1;text-align:center;padding:10px 0;font-size:13px;font-weight:600;cursor:pointer;background:{{ mobileBg }};color:{{ mobileColor }};">Mobile</div>
+                    <div onClick="{{ setStatic }}" style="flex:1;text-align:center;padding:10px 0;font-size:13px;font-weight:600;cursor:pointer;background:{{ staticBg }};color:{{ staticColor }};">Static</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px 16px;margin-bottom:16px;">
+                <sc-for list="{{ boolFields }}" as="bf" hint-placeholder-count="4">
+                  <div>
+                    <label style="display:block;font-size:12px;font-weight:600;color:oklch(0.5 0.005 90);margin-bottom:6px;">{{ bf.label }}</label>
+                    <div style="display:flex;border:1px solid oklch(0.85 0.005 90);border-radius:7px;overflow:hidden;">
+                      <div onClick="{{ bf.setYes }}" style="flex:1;text-align:center;padding:10px 0;font-size:13px;font-weight:600;cursor:pointer;background:{{ bf.yesBg }};color:{{ bf.yesColor }};">Yes</div>
+                      <div onClick="{{ bf.setNo }}" style="flex:1;text-align:center;padding:10px 0;font-size:13px;font-weight:600;cursor:pointer;background:{{ bf.noBg }};color:{{ bf.noColor }};">No</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="margin-bottom:20px;">
+                <label style="display:block;font-size:12px;font-weight:600;color:oklch(0.5 0.005 90);margin-bottom:6px;">Comments</label>
+                <textarea placeholder="Anything else worth noting…" value="{{ newStage.comments }}" onChange="{{ onCommentsChange }}" rows="3" style="width:100%;padding:10px 12px;border:1px solid oklch(0.85 0.005 90);border-radius:7px;font-size:14px;outline:none;resize:vertical;"></textarea>
+              </div>
+
+              <sc-if value="{{ stageValidationError }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:12.5px;color:oklch(0.55 0.19 25);margin-bottom:12px;">Address and Scope of Works are required.</div>
+              </sc-if>
+
+              <div style="display:flex;gap:10px;">
+                <button onClick="{{ createStage }}" disabled="{{ savingStage }}" style="padding:10px 18px;border:none;border-radius:7px;background:oklch(0.25 0.01 90);color:#fff;font-size:13.5px;font-weight:600;cursor:pointer;">{{ saveStageLabel }}</button>
+                <button onClick="{{ toggleNewStageForm }}" style="padding:10px 16px;border:1px solid oklch(0.85 0.005 90);border-radius:7px;background:#fff;color:oklch(0.4 0.005 90);font-size:13.5px;font-weight:600;cursor:pointer;">Cancel</button>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ stagesLoading }}" hint-placeholder-val="{{ false }}">
+            <div style="color:oklch(0.55 0.005 90);font-size:13.5px;padding:20px 0;">Loading stages…</div>
+          </sc-if>
+
+          <sc-if value="{{ noStagesYet }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1px dashed oklch(0.85 0.005 90);border-radius:10px;padding:40px;text-align:center;color:oklch(0.55 0.005 90);font-size:13.5px;">No stages yet. Add the first stage above.</div>
+          </sc-if>
+
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <sc-for list="{{ stages }}" as="stage" hint-placeholder-count="0">
+              <div style="background:#fff;border:1px solid oklch(0.9 0.005 90);border-radius:10px;padding:18px 20px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                  <div style="font-size:14.5px;font-weight:700;">Stage {{ stage.orderLabel }}</div>
+                  <div style="font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:20px;background:oklch(0.95 0.03 55);color:oklch(0.45 0.14 55);text-transform:uppercase;letter-spacing:.03em;">{{ stage.works_mobile_static }}</div>
+                </div>
+                <div style="font-size:13.5px;color:oklch(0.3 0.005 90);margin-bottom:4px;">{{ stage.address }}</div>
+                <div style="font-size:13px;color:oklch(0.5 0.005 90);margin-bottom:10px;">{{ stage.scope_of_works }}</div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:oklch(0.45 0.005 90);">
+                  <span>{{ stage.dateRangeLabel }}</span>
+                  <span>·</span>
+                  <span>{{ stage.work_hours }} ({{ stage.shift }})</span>
+                  <span>·</span>
+                  <span>{{ stage.lanesLabel }}</span>
+                  <span>·</span>
+                  <span>Bus {{ stage.busLabel }}</span>
+                  <span>·</span>
+                  <span>Road closed {{ stage.roadLabel }}</span>
+                  <span>·</span>
+                  <span>Footpath {{ stage.footpathLabel }}</span>
+                  <span>·</span>
+                  <span>Cycle lane {{ stage.cycleLabel }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const SUPABASE_URL = 'https://ulpvemwsnpoeoqfabnpt.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_BiTiy8FZh3wR-8LB6c_Grg_8jKqWaKg';
+// MVP shared password — change this to whatever you like.
+const SHARED_PASSWORD = 'tcp2026';
+
+function fmtTime12(t) {
+  if (!t) return '';
+  const [hStr, mStr] = t.split(':');
+  let h = parseInt(hStr, 10);
+  const m = mStr || '00';
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12;
+  if (h === 0) h = 12;
+  return `${String(h).padStart(2, '0')}:${m} ${ampm}`;
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T00:00:00');
+  if (isNaN(dt)) return d;
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+class Component extends DCLogic {
+  state = {
+    locked: true,
+    passwordInput: '',
+    passwordError: false,
+
+    view: 'jobs', // 'jobs' | 'jobDetail'
+    jobs: [],
+    jobsLoading: false,
+    showNewJobForm: false,
+    newJobNumber: '',
+    savingJob: false,
+
+    selectedJob: null,
+    stages: [],
+    stagesLoading: false,
+    showNewStageForm: false,
+    savingStage: false,
+    stageValidationError: false,
+    newStage: this.blankStage(),
+
+    error: ''
+  };
+
+  blankStage() {
+    return {
+      address: '',
+      scopeOfWorks: '',
+      startDate: '',
+      endDate: '',
+      workHoursStart: '07:00',
+      workHoursEnd: '17:00',
+      shift: 'day',
+      busAffected: false,
+      roadClosed: false,
+      footpathAffected: false,
+      lanesAffected: '',
+      cycleLaneAffected: false,
+      worksType: 'mobile',
+      comments: ''
+    };
+  }
+
+  componentDidMount() {
+    const configured = SUPABASE_URL.indexOf('YOUR_') !== 0 && SUPABASE_ANON_KEY.indexOf('YOUR_') !== 0;
+    if (configured && window.supabase) {
+      this.supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    }
+    const unlocked = typeof localStorage !== 'undefined' && localStorage.getItem('tcp_unlocked') === '1';
+    if (unlocked) {
+      this.setState({ locked: false }, () => this.loadJobs());
+    }
+  }
+
+  submitPassword = (e) => {
+    e.preventDefault();
+    if (this.state.passwordInput === SHARED_PASSWORD) {
+      try { localStorage.setItem('tcp_unlocked', '1'); } catch (e2) {}
+      this.setState({ locked: false, passwordError: false }, () => this.loadJobs());
+    } else {
+      this.setState({ passwordError: true });
+    }
+  };
+
+  onPasswordChange = (e) => this.setState({ passwordInput: e.target.value, passwordError: false });
+
+  async loadJobs() {
+    if (!this.supabase) return;
+    this.setState({ jobsLoading: true, error: '' });
+    const { data, error } = await this.supabase.from('jobs').select('*').order('created_at', { ascending: false });
+    if (error) { this.setState({ jobsLoading: false, error: error.message }); return; }
+    this.setState({ jobs: data || [], jobsLoading: false });
+  }
+
+  toggleNewJobForm = () => this.setState(s => ({ showNewJobForm: !s.showNewJobForm, newJobNumber: '' }));
+  onNewJobNumberChange = (e) => this.setState({ newJobNumber: e.target.value });
+
+  createJob = async () => {
+    if (!this.supabase) { this.setState({ error: 'Supabase is not configured yet.' }); return; }
+    if (!this.state.newJobNumber.trim()) return;
+    this.setState({ savingJob: true, error: '' });
+    const { data, error } = await this.supabase.from('jobs').insert({ job_number: this.state.newJobNumber.trim() }).select().single();
+    this.setState({ savingJob: false });
+    if (error) { this.setState({ error: error.message }); return; }
+    this.setState({ showNewJobForm: false, newJobNumber: '' });
+    await this.loadJobs();
+    this.openJob(data);
+  };
+
+  openJob = async (job) => {
+    this.setState({ view: 'jobDetail', selectedJob: job, showNewStageForm: false, newStage: this.blankStage() });
+    this.loadStages(job.id);
+  };
+
+  goToJobsList = () => {
+    this.setState({ view: 'jobs', selectedJob: null, stages: [] });
+    this.loadJobs();
+  };
+
+  async loadStages(jobId) {
+    if (!this.supabase) return;
+    this.setState({ stagesLoading: true, error: '' });
+    const { data, error } = await this.supabase.from('stages').select('*').eq('job_id', jobId).order('created_at', { ascending: true });
+    if (error) { this.setState({ stagesLoading: false, error: error.message }); return; }
+    this.setState({ stages: data || [], stagesLoading: false });
+  }
+
+  stageToFormValues(st) {
+    return {
+      address: st.address || '',
+      scopeOfWorks: st.scope_of_works || '',
+      startDate: st.start_date || '',
+      endDate: st.end_date || '',
+      workHoursStart: st.work_hours_start || '07:00',
+      workHoursEnd: st.work_hours_end || '17:00',
+      shift: st.shift || 'day',
+      busAffected: !!st.bus_affected,
+      roadClosed: !!st.road_closed,
+      footpathAffected: !!st.footpath_affected,
+      lanesAffected: st.lanes_affected != null ? String(st.lanes_affected) : '',
+      cycleLaneAffected: !!st.cycle_lane_affected,
+      worksType: st.works_mobile_static || 'mobile',
+      comments: st.comments || ''
+    };
+  }
+
+  toggleNewStageForm = () => this.setState(s => {
+    const opening = !s.showNewStageForm;
+    const lastStage = s.stages.length ? s.stages[s.stages.length - 1] : null;
+    const prefill = opening && lastStage ? this.stageToFormValues(lastStage) : this.blankStage();
+    return { showNewStageForm: opening, newStage: prefill, stageValidationError: false };
+  });
+
+  setStageField(key, value) {
+    this.setState(s => ({ newStage: { ...s.newStage, [key]: value } }));
+  }
+  onAddressChange = (e) => this.setStageField('address', e.target.value);
+  onScopeChange = (e) => this.setStageField('scopeOfWorks', e.target.value);
+  onStartDateChange = (e) => this.setStageField('startDate', e.target.value);
+  onEndDateChange = (e) => this.setStageField('endDate', e.target.value);
+  onWorkHoursStartChange = (e) => this.setStageField('workHoursStart', e.target.value);
+  onWorkHoursEndChange = (e) => this.setStageField('workHoursEnd', e.target.value);
+  onLanesChange = (e) => this.setStageField('lanesAffected', e.target.value);
+  onCommentsChange = (e) => this.setStageField('comments', e.target.value);
+  setShiftDay = () => this.setStageField('shift', 'day');
+  setShiftNight = () => this.setStageField('shift', 'night');
+  setMobile = () => this.setStageField('worksType', 'mobile');
+  setStatic = () => this.setStageField('worksType', 'static');
+
+  toggleBool = (key, val) => this.setStageField(key, val);
+
+  createStage = async () => {
+    if (!this.supabase) { this.setState({ error: 'Supabase is not configured yet.' }); return; }
+    const ns = this.state.newStage;
+    if (!ns.address.trim() || !ns.scopeOfWorks.trim()) {
+      this.setState({ stageValidationError: true });
+      return;
+    }
+    this.setState({ savingStage: true, stageValidationError: false, error: '' });
+    const payload = {
+      job_id: this.state.selectedJob.id,
+      address: ns.address.trim(),
+      scope_of_works: ns.scopeOfWorks.trim(),
+      start_date: ns.startDate || null,
+      end_date: ns.endDate || null,
+      work_hours_start: ns.workHoursStart || null,
+      work_hours_end: ns.workHoursEnd || null,
+      shift: ns.shift,
+      bus_affected: ns.busAffected,
+      road_closed: ns.roadClosed,
+      footpath_affected: ns.footpathAffected,
+      lanes_affected: ns.lanesAffected === '' ? null : Number(ns.lanesAffected),
+      cycle_lane_affected: ns.cycleLaneAffected,
+      works_mobile_static: ns.worksType,
+      comments: ns.comments.trim()
+    };
+    const { error } = await this.supabase.from('stages').insert(payload);
+    this.setState({ savingStage: false });
+    if (error) { this.setState({ error: error.message }); return; }
+    this.setState({ showNewStageForm: false, newStage: this.blankStage() });
+    this.loadStages(this.state.selectedJob.id);
+  };
+
+  renderVals() {
+    const s = this.state;
+    const segBg = (active) => active ? 'oklch(0.7 0.16 55)' : '#fff';
+    const segColor = (active) => active ? '#fff' : 'oklch(0.4 0.005 90)';
+
+    const boolDefs = [
+      { key: 'busAffected', label: 'Bus Affected' },
+      { key: 'roadClosed', label: 'Road Closed' },
+      { key: 'footpathAffected', label: 'Footpath Affected' },
+      { key: 'cycleLaneAffected', label: 'Cycle Lane Affected' }
+    ];
+    const boolFields = boolDefs.map(d => {
+      const val = s.newStage[d.key];
+      return {
+        key: d.key,
+        label: d.label,
+        yesBg: segBg(val === true), yesColor: segColor(val === true),
+        noBg: segBg(val === false), noColor: segColor(val === false),
+        setYes: () => this.toggleBool(d.key, true),
+        setNo: () => this.toggleBool(d.key, false)
+      };
+    });
+
+    const jobs = s.jobs.map(j => ({
+      job_number: j.job_number,
+      createdLabel: fmtDate((j.created_at || '').slice(0, 10)),
+      open: () => this.openJob(j)
+    }));
+
+    const stages = s.stages.map((st, i) => ({
+      orderLabel: i + 1,
+      address: st.address,
+      scope_of_works: st.scope_of_works,
+      works_mobile_static: st.works_mobile_static,
+      shift: st.shift,
+      work_hours: (st.work_hours_start && st.work_hours_end) ? `${fmtTime12(st.work_hours_start)} – ${fmtTime12(st.work_hours_end)}` : '',
+      dateRangeLabel: (st.start_date || st.end_date) ? `${fmtDate(st.start_date)} → ${fmtDate(st.end_date)}` : 'Dates TBD',
+      lanesLabel: st.lanes_affected != null ? `${st.lanes_affected} lane(s) affected` : 'Lanes: n/a',
+      busLabel: st.bus_affected ? 'Yes' : 'No',
+      roadLabel: st.road_closed ? 'Yes' : 'No',
+      footpathLabel: st.footpath_affected ? 'Yes' : 'No',
+      cycleLabel: st.cycle_lane_affected ? 'Yes' : 'No'
+    }));
+
+    return {
+      showConfigBanner: SUPABASE_URL.indexOf('YOUR_') === 0,
+      locked: s.locked,
+      unlockedView: !s.locked,
+      passwordInput: s.passwordInput,
+      passwordError: s.passwordError,
+      submitPassword: this.submitPassword,
+      onPasswordChange: this.onPasswordChange,
+
+      error: s.error,
+
+      viewJobsList: s.view === 'jobs',
+      viewJobDetail: s.view === 'jobDetail' && !!s.selectedJob,
+      goToJobsList: this.goToJobsList,
+
+      jobsLoading: s.jobsLoading,
+      noJobsYet: !s.jobsLoading && s.jobs.length === 0 && !s.showNewJobForm,
+      jobs,
+      showNewJobForm: s.showNewJobForm,
+      toggleNewJobForm: this.toggleNewJobForm,
+      newJobNumber: s.newJobNumber,
+      onNewJobNumberChange: this.onNewJobNumberChange,
+      createJob: this.createJob,
+      savingJob: s.savingJob,
+      createJobLabel: s.savingJob ? 'Saving…' : 'Create Job',
+
+      selectedJob: s.selectedJob,
+
+      showNewStageForm: s.showNewStageForm,
+      toggleNewStageForm: this.toggleNewStageForm,
+      newStage: s.newStage,
+      onAddressChange: this.onAddressChange,
+      onScopeChange: this.onScopeChange,
+      onStartDateChange: this.onStartDateChange,
+      onEndDateChange: this.onEndDateChange,
+      onWorkHoursStartChange: this.onWorkHoursStartChange,
+      onWorkHoursEndChange: this.onWorkHoursEndChange,
+      onLanesChange: this.onLanesChange,
+      onCommentsChange: this.onCommentsChange,
+      setShiftDay: this.setShiftDay,
+      setShiftNight: this.setShiftNight,
+      setMobile: this.setMobile,
+      setStatic: this.setStatic,
+      shiftDayBg: segBg(s.newStage.shift === 'day'), shiftDayColor: segColor(s.newStage.shift === 'day'),
+      shiftNightBg: segBg(s.newStage.shift === 'night'), shiftNightColor: segColor(s.newStage.shift === 'night'),
+      mobileBg: segBg(s.newStage.worksType === 'mobile'), mobileColor: segColor(s.newStage.worksType === 'mobile'),
+      staticBg: segBg(s.newStage.worksType === 'static'), staticColor: segColor(s.newStage.worksType === 'static'),
+      boolFields,
+      stageValidationError: s.stageValidationError,
+      createStage: this.createStage,
+      savingStage: s.savingStage,
+      saveStageLabel: s.savingStage ? 'Saving…' : 'Save Stage',
+
+      stagesLoading: s.stagesLoading,
+      noStagesYet: !s.stagesLoading && s.stages.length === 0 && !s.showNewStageForm,
+      stages
+    };
+  }
+}
+
+</script>
+</body>
+</html>
