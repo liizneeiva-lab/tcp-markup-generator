@@ -230,8 +230,105 @@
                   <span>·</span>
                   <span>Cycle lane {{ stage.cycleLabel }}</span>
                 </div>
+                <button onClick="{{ stage.openMap }}" style="margin-top:12px;padding:8px 14px;border:1px solid oklch(0.85 0.005 90);border-radius:7px;background:#fff;color:oklch(0.35 0.005 90);font-size:12.5px;font-weight:600;cursor:pointer;" style-hover="border-color:oklch(0.7 0.16 55);color:oklch(0.5 0.14 55)">{{ stage.mapButtonLabel }}</button>
               </div>
             </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- MAP EDITOR VIEW -->
+      <sc-if value="{{ viewMapEditor }}" hint-placeholder-val="{{ false }}">
+        <div style="flex:1;display:flex;flex-direction:column;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid oklch(0.9 0.005 90);">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <button onClick="{{ closeMapEditor }}" style="border:none;background:none;color:oklch(0.55 0.005 90);font-size:13px;cursor:pointer;padding:0;">← Back to stages</button>
+              <div style="font-size:14px;font-weight:700;">Stage {{ mapStageIndexLabel }} — Map &amp; Markup</div>
+            </div>
+            <sc-if value="{{ hasMap }}" hint-placeholder-val="{{ false }}">
+              <label style="padding:8px 14px;border:1px solid oklch(0.85 0.005 90);border-radius:7px;background:#fff;color:oklch(0.35 0.005 90);font-size:12.5px;font-weight:600;cursor:pointer;">
+                {{ mapReplaceLabel }}
+                <input type="file" accept="image/png,image/jpeg" onChange="{{ onMapFileChange }}" style="display:none;"></input>
+              </label>
+            </sc-if>
+          </div>
+
+          <div style="display:flex;flex:1;min-height:0;">
+            <div style="width:180px;flex:none;border-right:1px solid oklch(0.9 0.005 90);padding:16px;display:flex;flex-direction:column;gap:6px;overflow-y:auto;">
+              <div style="font-size:11px;font-weight:700;color:oklch(0.55 0.005 90);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">Tools</div>
+              <sc-for list="{{ tools }}" as="t" hint-placeholder-count="9">
+                <div onClick="{{ t.onClick }}" style="padding:9px 10px;border-radius:7px;background:{{ t.bg }};color:{{ t.color }};font-size:13px;font-weight:600;cursor:pointer;border:1px solid oklch(0.88 0.005 90);">{{ t.label }}</div>
+              </sc-for>
+
+              <div style="height:1px;background:oklch(0.9 0.005 90);margin:10px 0;"></div>
+
+              <div style="display:flex;gap:6px;">
+                <button onClick="{{ undo }}" disabled="{{ !canUndo }}" style="flex:1;padding:8px 0;border:1px solid oklch(0.85 0.005 90);border-radius:7px;background:#fff;font-size:12.5px;font-weight:600;cursor:pointer;color:oklch(0.35 0.005 90);">Undo</button>
+                <button onClick="{{ redo }}" disabled="{{ !canRedo }}" style="flex:1;padding:8px 0;border:1px solid oklch(0.85 0.005 90);border-radius:7px;background:#fff;font-size:12.5px;font-weight:600;cursor:pointer;color:oklch(0.35 0.005 90);">Redo</button>
+              </div>
+
+              <sc-if value="{{ hasSelection }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ deleteSelected }}" style="margin-top:4px;padding:9px 0;border:none;border-radius:7px;background:oklch(0.55 0.19 25);color:#fff;font-size:12.5px;font-weight:600;cursor:pointer;">Delete selected</button>
+              </sc-if>
+
+              <sc-if value="{{ showStageVisibility }}" hint-placeholder-val="{{ false }}">
+                <div style="height:1px;background:oklch(0.9 0.005 90);margin:10px 0;"></div>
+                <div style="font-size:11px;font-weight:700;color:oklch(0.55 0.005 90);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">Show stages</div>
+                <sc-for list="{{ stageVisibilityList }}" as="sv" hint-placeholder-count="2">
+                  <div onClick="{{ sv.toggle }}" style="display:flex;align-items:center;gap:8px;padding:6px 4px;cursor:pointer;border-radius:6px;">
+                    <input type="checkbox" checked="{{ sv.checked }}" onChange="{{ sv.toggle }}" style="width:14px;height:14px;flex:none;"></input>
+                    <div style="width:9px;height:9px;border-radius:50%;background:{{ sv.color }};flex:none;"></div>
+                    <div style="font-size:12.5px;color:oklch(0.35 0.005 90);">{{ sv.label }}</div>
+                  </div>
+                </sc-for>
+              </sc-if>
+            </div>
+
+            <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:24px;background:oklch(0.95 0.004 90);overflow:auto;">
+              <sc-if value="{{ hasMap }}" hint-placeholder-val="{{ false }}">
+                <div style="position:relative;width:900px;height:560px;max-width:100%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.1);">
+                  <img src="{{ mapUrl }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none;user-select:none;"></img>
+                  <svg ref="{{ setCanvasRef }}" onClick="{{ onCanvasClick }}" onDoubleClick="{{ onCanvasDoubleClick }}" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;cursor:crosshair;">
+                    <sc-for list="{{ polygonAnns }}" as="a" hint-placeholder-count="0">
+                      <polygon points="{{ a.pointsAttr }}" fill="transparent" stroke="{{ a.color }}" stroke-width="{{ a.strokeWidth }}" onClick="{{ a.select }}" onMouseDown="{{ a.startDrag }}" style="cursor:move;"></polygon>
+                    </sc-for>
+                    <sc-for list="{{ rectAnns }}" as="a" hint-placeholder-count="0">
+                      <rect x="{{ a.x }}" y="{{ a.y }}" width="{{ a.w }}" height="{{ a.h }}" fill="transparent" stroke="{{ a.color }}" stroke-width="{{ a.strokeWidth }}" onClick="{{ a.select }}" onMouseDown="{{ a.startDrag }}" style="cursor:move;"></rect>
+                    </sc-for>
+                    <sc-for list="{{ lineAnns }}" as="a" hint-placeholder-count="0">
+                      <line x1="{{ a.x1 }}" y1="{{ a.y1 }}" x2="{{ a.x2 }}" y2="{{ a.y2 }}" stroke="{{ a.color }}" stroke-width="{{ a.strokeWidth }}" stroke-dasharray="{{ a.dash }}" onClick="{{ a.select }}" onMouseDown="{{ a.startDrag }}" style="cursor:move;"></line>
+                    </sc-for>
+                    <sc-for list="{{ arrowAnns }}" as="a" hint-placeholder-count="0">
+                      <line x1="{{ a.x1 }}" y1="{{ a.y1 }}" x2="{{ a.x2 }}" y2="{{ a.y2 }}" stroke="{{ a.color }}" stroke-width="{{ a.strokeWidth }}" marker-end="url(#arrowhead)" onClick="{{ a.select }}" onMouseDown="{{ a.startDrag }}" style="cursor:move;"></line>
+                    </sc-for>
+                    <sc-for list="{{ labelAnns }}" as="a" hint-placeholder-count="0">
+                      <text x="{{ a.x }}" y="{{ a.y }}" font-size="{{ a.fontSize }}" font-weight="{{ a.fontWeight }}" fill="{{ a.color }}" stroke="#fff" stroke-width="{{ a.outline }}" paint-order="stroke" onClick="{{ a.select }}" onMouseDown="{{ a.startDrag }}" style="cursor:move;font-family:Inter,sans-serif;">{{ a.text }}</text>
+                    </sc-for>
+                    <sc-if value="{{ hasDraftPolygon }}" hint-placeholder-val="{{ false }}">
+                      <polygon points="{{ draftPointsAttr }}" fill="transparent" stroke="oklch(0.5 0.005 90)" stroke-width="0.35" stroke-dasharray="1.5,1"></polygon>
+                    </sc-if>
+                    <defs>
+                      <marker id="arrowhead" markerWidth="6" markerHeight="6" refX="4.5" refY="3" orient="auto">
+                        <path d="M0,0 L6,3 L0,6 Z" fill="oklch(0.4 0.1 55)"></path>
+                      </marker>
+                    </defs>
+                  </svg>
+                  <sc-if value="{{ editingLabel }}" hint-placeholder-val="{{ false }}">
+                    <input type="text" autofocus="true" value="{{ editingLabel.text }}" onChange="{{ onEditingLabelTextChange }}" onKeyDown="{{ onLabelKeyDown }}" onBlur="{{ commitEditingLabel }}" placeholder="Label text…" style="position:absolute;transform:translate(-4px,-14px);padding:4px 8px;border:1px solid oklch(0.7 0.16 55);border-radius:5px;font-size:12px;outline:none;min-width:90px;"></input>
+                  </sc-if>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ noMap }}" hint-placeholder-val="{{ true }}">
+                <div style="text-align:center;">
+                  <div style="font-size:13.5px;color:oklch(0.5 0.005 90);margin-bottom:14px;">No map uploaded yet for this stage.</div>
+                  <label style="padding:11px 20px;border:none;border-radius:7px;background:oklch(0.7 0.16 55);color:#fff;font-size:13.5px;font-weight:600;cursor:pointer;">
+                    {{ mapUploadLabel }}
+                    <input type="file" accept="image/png,image/jpeg" onChange="{{ onMapFileChange }}" style="display:none;"></input>
+                  </label>
+                </div>
+              </sc-if>
+            </div>
           </div>
         </div>
       </sc-if>
@@ -257,6 +354,27 @@ function fmtTime12(t) {
   if (h === 0) h = 12;
   return `${String(h).padStart(2, '0')}:${m} ${ampm}`;
 }
+
+const STAGE_COLORS = [
+  'oklch(0.62 0.14 55)',
+  'oklch(0.62 0.14 230)',
+  'oklch(0.62 0.14 150)',
+  'oklch(0.62 0.14 320)',
+  'oklch(0.62 0.14 280)',
+  'oklch(0.62 0.14 20)'
+];
+
+const TOOL_DEFS = [
+  { key: 'select', label: 'Select' },
+  { key: 'polygon', label: 'Polygon' },
+  { key: 'line', label: 'Line' },
+  { key: 'dashedLine', label: 'Dashed' },
+  { key: 'rectangle', label: 'Rectangle' },
+  { key: 'arrow', label: 'Arrow' },
+  { key: 'text', label: 'Text' },
+  { key: 'workZoneLabel', label: 'Work Zone' },
+  { key: 'stageLabel', label: 'Stage Label' }
+];
 
 function fmtDate(d) {
   if (!d) return '';
@@ -286,8 +404,24 @@ class Component extends DCLogic {
     stageValidationError: false,
     newStage: this.blankStage(),
 
-    error: ''
+    error: '',
+
+    // Map editor
+    mapStageId: null,
+    visibleStageIds: [],
+    annotations: [],
+    annotationsLoading: false,
+    mapUploading: false,
+    tool: 'select',
+    draft: null,
+    editingLabel: null,
+    selectedAnnotationId: null
   };
+
+  undoStack = [];
+  redoStack = [];
+  canvasEl = null;
+  dragInfo = null;
 
   blankStage() {
     return {
@@ -448,6 +582,227 @@ class Component extends DCLogic {
     this.loadStages(this.state.selectedJob.id);
   };
 
+  // ---------- Map editor ----------
+
+  openMapEditor = (stage) => {
+    const stageIds = this.state.stages.map(st => st.id);
+    this.undoStack = [];
+    this.redoStack = [];
+    this.setState({
+      view: 'mapEditor', mapStageId: stage.id, visibleStageIds: [stage.id],
+      tool: 'select', selectedAnnotationId: null, draft: null, editingLabel: null,
+      annotations: [], annotationsLoading: true
+    });
+    this.loadAnnotations(stageIds);
+  };
+
+  loadAnnotations = async (stageIds) => {
+    if (!this.supabase) return;
+    const { data, error } = await this.supabase.from('annotations').select('*').in('stage_id', stageIds);
+    if (error) { this.setState({ error: error.message, annotationsLoading: false }); return; }
+    const annotations = (data || []).map(r => ({ id: r.id, stage_id: r.stage_id, kind: r.kind, points: r.points || [], text: r.text || '' }));
+    this.setState({ annotations, annotationsLoading: false });
+  };
+
+  closeMapEditor = () => this.setState({ view: 'jobDetail' });
+
+  toggleStageVisible = (stageId) => this.setState(s => {
+    const has = s.visibleStageIds.includes(stageId);
+    return { visibleStageIds: has ? s.visibleStageIds.filter(id => id !== stageId) : [...s.visibleStageIds, stageId] };
+  });
+
+  setTool = (tool) => this.setState({ tool, draft: null, editingLabel: null });
+
+  setCanvasRef = (el) => { this.canvasEl = el; };
+
+  getPointFromEvent(e) {
+    const rect = this.canvasEl.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+    return { x, y };
+  }
+
+  onCanvasClick = (e) => {
+    const tool = this.state.tool;
+    if (tool === 'select') { this.setState({ selectedAnnotationId: null }); return; }
+    const pt = this.getPointFromEvent(e);
+    if (tool === 'polygon') {
+      this.setState(s => ({ draft: { kind: 'polygon', points: [...(s.draft && s.draft.kind === 'polygon' ? s.draft.points : []), pt] } }));
+      return;
+    }
+    if (tool === 'line' || tool === 'dashedLine' || tool === 'rectangle' || tool === 'arrow') {
+      const existing = this.state.draft && this.state.draft.kind === tool ? this.state.draft.points : [];
+      const points = [...existing, pt];
+      if (points.length >= 2) {
+        this.commitAnnotation(tool, points);
+        this.setState({ draft: null });
+      } else {
+        this.setState({ draft: { kind: tool, points } });
+      }
+      return;
+    }
+    if (tool === 'text' || tool === 'workZoneLabel' || tool === 'stageLabel') {
+      this.setState({ editingLabel: { kind: tool, x: pt.x, y: pt.y, text: '' } });
+      return;
+    }
+  };
+
+  onCanvasDoubleClick = () => {
+    const draft = this.state.draft;
+    if (draft && draft.kind === 'polygon' && draft.points.length >= 3) {
+      this.commitAnnotation('polygon', draft.points);
+      this.setState({ draft: null });
+    }
+  };
+
+  annToRow(ann) { return { stage_id: ann.stage_id, kind: ann.kind, points: ann.points, text: ann.text || null }; }
+
+  commitAnnotation(kind, points) {
+    const ann = { id: 'tmp-' + Date.now() + Math.random(), stage_id: this.state.mapStageId, kind, points, text: '' };
+    this.runCommand(this.addAnnotationCommand(ann));
+  }
+
+  addAnnotationCommand(ann) {
+    return {
+      apply: async () => {
+        const { data, error } = await this.supabase.from('annotations').insert(this.annToRow(ann)).select().single();
+        if (error) { this.setState({ error: error.message }); return; }
+        ann.id = data.id;
+        this.setState(s => ({ annotations: [...s.annotations, ann] }));
+      },
+      revert: async () => {
+        await this.supabase.from('annotations').delete().eq('id', ann.id);
+        this.setState(s => ({ annotations: s.annotations.filter(a => a.id !== ann.id) }));
+      }
+    };
+  }
+
+  moveAnnotationCommand(id, before, after) {
+    return {
+      apply: async () => {
+        await this.supabase.from('annotations').update({ points: after }).eq('id', id);
+        this.setState(s => ({ annotations: s.annotations.map(a => a.id === id ? { ...a, points: after } : a) }));
+      },
+      revert: async () => {
+        await this.supabase.from('annotations').update({ points: before }).eq('id', id);
+        this.setState(s => ({ annotations: s.annotations.map(a => a.id === id ? { ...a, points: before } : a) }));
+      }
+    };
+  }
+
+  deleteAnnotationCommand(ann) {
+    return {
+      apply: async () => {
+        await this.supabase.from('annotations').delete().eq('id', ann.id);
+        this.setState(s => ({ annotations: s.annotations.filter(a => a.id !== ann.id), selectedAnnotationId: null }));
+      },
+      revert: async () => {
+        const { data, error } = await this.supabase.from('annotations').insert(this.annToRow(ann)).select().single();
+        if (!error) ann.id = data.id;
+        this.setState(s => ({ annotations: [...s.annotations, ann] }));
+      }
+    };
+  }
+
+  runCommand = async (entry) => {
+    await entry.apply();
+    this.undoStack.push(entry);
+    this.redoStack = [];
+    this.forceUpdate();
+  };
+
+  undo = async () => {
+    const entry = this.undoStack.pop();
+    if (!entry) return;
+    await entry.revert();
+    this.redoStack.push(entry);
+    this.forceUpdate();
+  };
+
+  redo = async () => {
+    const entry = this.redoStack.pop();
+    if (!entry) return;
+    await entry.apply();
+    this.undoStack.push(entry);
+    this.forceUpdate();
+  };
+
+  onEditingLabelTextChange = (e) => this.setState(s => ({ editingLabel: { ...s.editingLabel, text: e.target.value } }));
+
+  commitEditingLabel = () => {
+    const el = this.state.editingLabel;
+    if (!el) return;
+    const text = el.text.trim();
+    this.setState({ editingLabel: null });
+    if (!text) return;
+    const ann = { id: 'tmp-' + Date.now() + Math.random(), stage_id: this.state.mapStageId, kind: el.kind, points: [{ x: el.x, y: el.y }], text };
+    this.runCommand(this.addAnnotationCommand(ann));
+  };
+  cancelEditingLabel = () => this.setState({ editingLabel: null });
+  onLabelKeyDown = (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); this.commitEditingLabel(); }
+    else if (e.key === 'Escape') { this.cancelEditingLabel(); }
+  };
+
+  selectAnnotation = (id, e) => { if (e && e.stopPropagation) e.stopPropagation(); this.setState({ selectedAnnotationId: id }); };
+
+  startDrag = (id, e) => {
+    if (this.state.tool !== 'select') return;
+    e.stopPropagation();
+    const ann = this.state.annotations.find(a => a.id === id);
+    if (!ann) return;
+    this.setState({ selectedAnnotationId: id });
+    const rect = this.canvasEl.getBoundingClientRect();
+    this.dragInfo = { id, startX: e.clientX, startY: e.clientY, rectW: rect.width, rectH: rect.height, original: ann.points.map(p => ({ ...p })) };
+    window.addEventListener('mousemove', this.onDragMove);
+    window.addEventListener('mouseup', this.onDragEnd);
+  };
+
+  onDragMove = (e) => {
+    if (!this.dragInfo) return;
+    const dx = ((e.clientX - this.dragInfo.startX) / this.dragInfo.rectW) * 100;
+    const dy = ((e.clientY - this.dragInfo.startY) / this.dragInfo.rectH) * 100;
+    const newPoints = this.dragInfo.original.map(p => ({ x: Math.max(0, Math.min(100, p.x + dx)), y: Math.max(0, Math.min(100, p.y + dy)) }));
+    this.setState(s => ({ annotations: s.annotations.map(a => a.id === this.dragInfo.id ? { ...a, points: newPoints } : a) }));
+  };
+
+  onDragEnd = () => {
+    if (!this.dragInfo) return;
+    window.removeEventListener('mousemove', this.onDragMove);
+    window.removeEventListener('mouseup', this.onDragEnd);
+    const { id, original } = this.dragInfo;
+    const current = this.state.annotations.find(a => a.id === id);
+    this.dragInfo = null;
+    if (!current) return;
+    if (JSON.stringify(current.points) !== JSON.stringify(original)) {
+      const entry = this.moveAnnotationCommand(id, original, current.points);
+      entry.apply().then(() => { this.undoStack.push(entry); this.redoStack = []; this.forceUpdate(); });
+    }
+  };
+
+  deleteSelected = () => {
+    const id = this.state.selectedAnnotationId;
+    if (!id) return;
+    const ann = this.state.annotations.find(a => a.id === id);
+    if (!ann) return;
+    this.runCommand(this.deleteAnnotationCommand(ann));
+  };
+
+  onMapFileChange = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file || !this.supabase) return;
+    this.setState({ mapUploading: true, error: '' });
+    const stageId = this.state.mapStageId;
+    const path = `${stageId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+    const { error: upErr } = await this.supabase.storage.from('maps').upload(path, file, { upsert: true });
+    if (upErr) { this.setState({ mapUploading: false, error: upErr.message }); return; }
+    const { data } = this.supabase.storage.from('maps').getPublicUrl(path);
+    const mapUrl = data.publicUrl;
+    const { error: updErr } = await this.supabase.from('stages').update({ map_url: mapUrl }).eq('id', stageId);
+    if (updErr) { this.setState({ mapUploading: false, error: updErr.message }); return; }
+    this.setState(s => ({ mapUploading: false, stages: s.stages.map(st => st.id === stageId ? { ...st, map_url: mapUrl } : st) }));
+  };
+
   renderVals() {
     const s = this.state;
     const segBg = (active) => active ? 'oklch(0.7 0.16 55)' : '#fff';
@@ -489,8 +844,86 @@ class Component extends DCLogic {
       busLabel: st.bus_affected ? 'Yes' : 'No',
       roadLabel: st.road_closed ? 'Yes' : 'No',
       footpathLabel: st.footpath_affected ? 'Yes' : 'No',
-      cycleLabel: st.cycle_lane_affected ? 'Yes' : 'No'
+      cycleLabel: st.cycle_lane_affected ? 'Yes' : 'No',
+      mapButtonLabel: st.map_url ? 'Open Map & Markup' : '+ Add Map & Markup',
+      openMap: () => this.openMapEditor(st)
     }));
+
+    // ---------- Map editor render data ----------
+    const mapStage = s.stages.find(st => st.id === s.mapStageId) || null;
+    const stageVisibilityList = s.stages.map((st, i) => ({
+      id: st.id,
+      label: `Stage ${i + 1}`,
+      color: STAGE_COLORS[i % STAGE_COLORS.length],
+      checked: s.visibleStageIds.includes(st.id),
+      toggle: () => this.toggleStageVisible(st.id)
+    }));
+    const stageColorOf = (stageId) => {
+      const idx = s.stages.findIndex(st => st.id === stageId);
+      return STAGE_COLORS[idx >= 0 ? idx % STAGE_COLORS.length : 0];
+    };
+
+    const visible = s.annotations.filter(a => s.visibleStageIds.includes(a.stage_id));
+    const withSelState = visible.map(a => ({ ...a, selected: a.id === s.selectedAnnotationId, color: stageColorOf(a.stage_id) }));
+
+    const polygonAnns = withSelState.filter(a => a.kind === 'polygon' && a.points.length >= 2).map(a => ({
+      key: a.id,
+      pointsAttr: a.points.map(p => `${p.x},${p.y}`).join(' '),
+      color: a.color,
+      strokeWidth: a.selected ? 0.7 : 0.35,
+      select: (e) => this.selectAnnotation(a.id, e),
+      startDrag: (e) => this.startDrag(a.id, e)
+    }));
+
+    const lineAnns = withSelState.filter(a => (a.kind === 'line' || a.kind === 'dashedLine') && a.points.length >= 2).map(a => ({
+      key: a.id,
+      x1: a.points[0].x, y1: a.points[0].y, x2: a.points[1].x, y2: a.points[1].y,
+      dash: a.kind === 'dashedLine' ? '2,1.4' : 'none',
+      color: a.color,
+      strokeWidth: a.selected ? 0.9 : 0.5,
+      select: (e) => this.selectAnnotation(a.id, e),
+      startDrag: (e) => this.startDrag(a.id, e)
+    }));
+
+    const arrowAnns = withSelState.filter(a => a.kind === 'arrow' && a.points.length >= 2).map(a => ({
+      key: a.id,
+      x1: a.points[0].x, y1: a.points[0].y, x2: a.points[1].x, y2: a.points[1].y,
+      color: a.color,
+      strokeWidth: a.selected ? 0.9 : 0.5,
+      markerId: 'arrowhead-' + a.id,
+      select: (e) => this.selectAnnotation(a.id, e),
+      startDrag: (e) => this.startDrag(a.id, e)
+    }));
+
+    const rectAnns = withSelState.filter(a => a.kind === 'rectangle' && a.points.length >= 2).map(a => {
+      const [p1, p2] = a.points;
+      const x = Math.min(p1.x, p2.x), y = Math.min(p1.y, p2.y);
+      const w = Math.abs(p2.x - p1.x), h = Math.abs(p2.y - p1.y);
+      return {
+        key: a.id, x, y, w, h, color: a.color,
+        strokeWidth: a.selected ? 0.7 : 0.35,
+        select: (e) => this.selectAnnotation(a.id, e),
+        startDrag: (e) => this.startDrag(a.id, e)
+      };
+    });
+
+    const labelStyle = (kind) => {
+      if (kind === 'stageLabel') return { fontSize: '3.4', fontWeight: '700' };
+      if (kind === 'workZoneLabel') return { fontSize: '2.6', fontWeight: '600' };
+      return { fontSize: '2.2', fontWeight: '500' };
+    };
+    const labelAnns = withSelState.filter(a => (a.kind === 'text' || a.kind === 'workZoneLabel' || a.kind === 'stageLabel') && a.points.length >= 1).map(a => {
+      const st = labelStyle(a.kind);
+      return {
+        key: a.id, x: a.points[0].x, y: a.points[0].y, text: a.text, color: a.color,
+        fontSize: st.fontSize, fontWeight: st.fontWeight,
+        outline: a.selected ? '0.3' : '0',
+        select: (e) => this.selectAnnotation(a.id, e),
+        startDrag: (e) => this.startDrag(a.id, e)
+      };
+    });
+
+    const draftPointsAttr = s.draft && s.draft.points.length ? s.draft.points.map(p => `${p.x},${p.y}`).join(' ') : '';
 
     return {
       showConfigBanner: SUPABASE_URL.indexOf('YOUR_') === 0,
@@ -547,7 +980,51 @@ class Component extends DCLogic {
 
       stagesLoading: s.stagesLoading,
       noStagesYet: !s.stagesLoading && s.stages.length === 0 && !s.showNewStageForm,
-      stages
+      stages,
+
+      // Map editor
+      viewMapEditor: s.view === 'mapEditor' && !!mapStage,
+      closeMapEditor: this.closeMapEditor,
+      mapStage,
+      mapStageIndexLabel: mapStage ? (s.stages.findIndex(st => st.id === mapStage.id) + 1) : '',
+      hasMap: !!(mapStage && mapStage.map_url),
+      noMap: !(mapStage && mapStage.map_url),
+      mapUrl: mapStage ? mapStage.map_url : '',
+      mapUploading: s.mapUploading,
+      onMapFileChange: this.onMapFileChange,
+      mapReplaceLabel: s.mapUploading ? 'Uploading…' : 'Replace Map',
+      mapUploadLabel: s.mapUploading ? 'Uploading…' : 'Upload Map (PNG / JPG)',
+
+      showStageVisibility: s.stages.length > 1,
+      stageVisibilityList,
+
+      tools: TOOL_DEFS.map(t => ({
+        key: t.key, label: t.label,
+        active: s.tool === t.key,
+        bg: s.tool === t.key ? 'oklch(0.25 0.01 90)' : '#fff',
+        color: s.tool === t.key ? '#fff' : 'oklch(0.35 0.005 90)',
+        onClick: () => this.setTool(t.key)
+      })),
+      canUndo: this.undoStack.length > 0,
+      canRedo: this.redoStack.length > 0,
+      undo: this.undo,
+      redo: this.redo,
+      hasSelection: !!s.selectedAnnotationId,
+      deleteSelected: this.deleteSelected,
+
+      setCanvasRef: this.setCanvasRef,
+      onCanvasClick: this.onCanvasClick,
+      onCanvasDoubleClick: this.onCanvasDoubleClick,
+
+      polygonAnns, lineAnns, arrowAnns, rectAnns, labelAnns,
+      hasDraftPolygon: !!(s.draft && s.draft.kind === 'polygon' && s.draft.points.length >= 2),
+      draftPointsAttr,
+
+      editingLabel: s.editingLabel,
+      onEditingLabelTextChange: this.onEditingLabelTextChange,
+      onLabelKeyDown: this.onLabelKeyDown,
+      commitEditingLabel: this.commitEditingLabel,
+      cancelEditingLabel: this.cancelEditingLabel
     };
   }
 }
